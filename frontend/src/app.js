@@ -76,6 +76,7 @@ async function loadProducts() {
         <div class="card-footer">
           <span>Categoría: <strong>${escapeHtml(prod.category)}</strong></span>
           <span>Stock: <strong>${prod.stock} uds.</strong></span>
+          <button class="btn-delete" onclick="deleteProduct(${prod.id})" title="Eliminar producto">🗑️ Eliminar</button>
         </div>
       </div>
     `).join('');
@@ -147,7 +148,7 @@ async function loadReviews() {
           <p class="card-desc">"${escapeHtml(rev.comment)}"</p>
           <div class="card-footer">
             <span>Fecha: ${dateStr}</span>
-            <span>ID: <code>${escapeHtml(rev.id || rev._id || 'N/A')}</code></span>
+            <button class="btn-delete" onclick="deleteReview('${escapeHtml(rev.id || rev._id)}')" title="Eliminar reseña">🗑️ Eliminar</button>
           </div>
         </div>
       `;
@@ -229,4 +230,30 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+// --- Eliminación (DELETE) ---
+async function deleteProduct(productId) {
+  if (!confirm(`¿Deseas eliminar el producto #${productId}?`)) return;
+  try {
+    const res = await fetch(`${API_PRODUCTS}/${productId}`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+    showToast(`🗑️ Producto #${productId} eliminado de PostgreSQL`);
+    await loadProducts();
+    await loadReviews();
+  } catch (err) {
+    showToast(`❌ Error al eliminar producto: ${err.message}`);
+  }
+}
+
+async function deleteReview(reviewId) {
+  if (!confirm('¿Deseas eliminar esta reseña?')) return;
+  try {
+    const res = await fetch(`${API_REVIEWS}/${reviewId}`, { method: 'DELETE' });
+    if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+    showToast(`🗑️ Reseña eliminada de MongoDB`);
+    await loadReviews();
+  } catch (err) {
+    showToast(`❌ Error al eliminar reseña: ${err.message}`);
+  }
 }

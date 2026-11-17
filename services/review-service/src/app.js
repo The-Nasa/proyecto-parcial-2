@@ -7,6 +7,124 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// --- Documentación OpenAPI / Swagger ---
+const reviewOpenApiSpec = {
+  openapi: '3.0.3',
+  info: {
+    title: 'Review Service API (Node.js + Express)',
+    version: '1.0.0',
+    description: 'Microservicio 2 para Parcial 2: Reseñas y calificaciones NoSQL (MongoDB).'
+  },
+  paths: {
+    '/health/live': {
+      get: {
+        summary: 'Liveness Probe (Kubernetes)',
+        responses: { 200: { description: 'Servicio vivo' } }
+      }
+    },
+    '/health/ready': {
+      get: {
+        summary: 'Readiness Probe (Kubernetes)',
+        responses: { 200: { description: 'Base de datos MongoDB lista' } }
+      }
+    },
+    '/api/reviews': {
+      get: {
+        summary: 'Listar todas las reseñas',
+        parameters: [
+          {
+            name: 'productId',
+            in: 'query',
+            description: 'Filtrar por ID de producto',
+            required: false,
+            schema: { type: 'integer' }
+          }
+        ],
+        responses: { 200: { description: 'Lista de reseñas' } }
+      },
+      post: {
+        summary: 'Registrar nueva reseña',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['productId', 'author', 'rating', 'comment'],
+                properties: {
+                  productId: { type: 'integer', example: 1 },
+                  author: { type: 'string', example: 'Carlos Mendoza' },
+                  rating: { type: 'integer', minimum: 1, maximum: 5, example: 5 },
+                  comment: { type: 'string', example: 'Excelente producto, entrega rápida.' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          201: { description: 'Reseña registrada con éxito' },
+          400: { description: 'Datos inválidos' }
+        }
+      }
+    },
+    '/api/reviews/{id}': {
+      get: {
+        summary: 'Obtener reseña por ID',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          200: { description: 'Reseña encontrada' },
+          404: { description: 'Reseña no encontrada' }
+        }
+      },
+      delete: {
+        summary: 'Eliminar reseña por ID',
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string' } }
+        ],
+        responses: {
+          204: { description: 'Reseña eliminada con éxito' },
+          404: { description: 'Reseña no encontrada' }
+        }
+      }
+    }
+  }
+};
+
+app.get('/api/reviews/openapi.json', (req, res) => {
+  res.status(200).json(reviewOpenApiSpec);
+});
+
+app.get('/api/reviews/docs', (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Review Service API - Swagger UI</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+</head>
+<body style="margin:0; background:#fafafa;">
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = () => {
+      SwaggerUIBundle({
+        url: '/api/reviews/openapi.json',
+        dom_id: '#swagger-ui',
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIBundle.SwaggerUIStandalonePreset
+        ],
+        layout: 'BaseLayout'
+      });
+    };
+  </script>
+</body>
+</html>`);
+});
+
 // --- Sondas de Salud (Kubernetes Probes) ---
 app.get('/health/live', (req, res) => {
   res.status(200).json({ status: 'alive', service: 'review-service' });
