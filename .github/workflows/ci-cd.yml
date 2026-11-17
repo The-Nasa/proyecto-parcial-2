@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write   # Necesario para federación OpenID Connect (OIDC) sin contraseñas fijas
+  id-token: write   # Requerido para autenticación OIDC Keyless con AWS
   contents: read
 
 env:
@@ -31,27 +31,30 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
+
+      - name: Install System Libraries (PostgreSQL Client)
+        run: |
+          sudo apt-get update && sudo apt-get install -y libpq-dev
 
       - name: Install Python Dependencies & Run Pytest
+        env:
+          DATABASE_URL: sqlite:///:memory:
         run: |
           cd services/product-service
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pytest -v
+          python -m pytest -v
 
       # --- Test Servicio 2: Node.js Express ---
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: services/review-service/package.json
 
       - name: Install Node Dependencies & Run Jest
         run: |
           cd services/review-service
-          npm ci
+          npm install
           npm test
 
   # ============================================================================
@@ -106,6 +109,7 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    continue-on-error: true # Permite pasar si el clúster EKS aún está apagado por ahorro de costos
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
