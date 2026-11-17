@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CloudStore Parcial 2 - Microservicios en AWS</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="brand">
+          <div class="logo">⚡</div>
+          <div>
+            <h1>CloudStore <span class="badge-parcial">Parcial 2</span></h1>
+            <p class="subtitle">Arquitectura Multi-Lenguaje con Kubernetes en AWS (FastAPI + Express)</p>
+          </div>
+        </div>
+
+        <!-- System Health Status -->
+        <div class="health-badges">
+          <div class="badge" id="badge-python">
+            <span class="status-dot"></span>
+            <span>Python (FastAPI + Postgres): <strong id="status-python">Conectando...</strong></span>
+          </div>
+          <div class="badge" id="badge-node">
+            <span class="status-dot"></span>
+            <span>Node.js (Express + NoSQL): <strong id="status-node">Conectando...</strong></span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid: 2 Columns for 2 Independent Microservices -->
+    <main class="main-grid">
+      <!-- Columna 1: Catálogo de Productos (Python - FastAPI) -->
+      <section class="panel panel-products">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="panel-icon">📦</span>
+            <h2>Catálogo de Productos <span class="tag tag-python">Python 3.12 · FastAPI</span></h2>
+          </div>
+          <button class="btn btn-primary" onclick="openProductModal()">+ Nuevo Producto</button>
+        </div>
+
+        <div class="service-meta">
+          <span>BD: <strong>PostgreSQL Dedicado</strong></span>
+          <span>Endpoint: <code>/api/products</code></span>
+        </div>
+
+        <div class="cards-list" id="products-list">
+          <div class="loading">Cargando productos...</div>
+        </div>
+      </section>
+
+      <!-- Columna 2: Reseñas y Calificaciones (Node.js - Express) -->
+      <section class="panel panel-reviews">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="panel-icon">⭐</span>
+            <h2>Reseñas de Clientes <span class="tag tag-node">Node.js 20 · Express</span></h2>
+          </div>
+          <button class="btn btn-secondary" onclick="openReviewModal()">+ Dejar Reseña</button>
+        </div>
+
+        <div class="service-meta">
+          <span>BD: <strong>NoSQL MongoDB Dedicado</strong></span>
+          <span>Endpoint: <code>/api/reviews</code></span>
+        </div>
+
+        <div class="cards-list" id="reviews-list">
+          <div class="loading">Cargando reseñas...</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Desarrollo de Aplicaciones en la Nube · <strong>Harness Engineering & Spec-Driven Development</strong> · Kubernetes en AWS EKS</p>
+    </footer>
+  </div>
+
+  <!-- Modal 1: Agregar Producto -->
+  <div class="modal-overlay" id="product-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Agregar Nuevo Producto (Servicio Python)</h3>
+        <button class="close-btn" onclick="closeProductModal()">&times;</button>
+      </div>
+      <form id="product-form" onsubmit="handleCreateProduct(event)">
+        <div class="form-group">
+          <label for="prod-name">Nombre del Producto</label>
+          <input type="text" id="prod-name" required placeholder="Ej: Monitor Gamer 144Hz">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="prod-price">Precio ($ USD)</label>
+            <input type="number" step="0.01" min="0.01" id="prod-price" required placeholder="249.99">
+          </div>
+          <div class="form-group">
+            <label for="prod-stock">Stock</label>
+            <input type="number" min="0" id="prod-stock" required value="10">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="prod-category">Categoría</label>
+          <input type="text" id="prod-category" required value="Tecnología">
+        </div>
+        <div class="form-group">
+          <label for="prod-desc">Descripción</label>
+          <textarea id="prod-desc" rows="3" placeholder="Detalles técnicos y especificaciones..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeProductModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar en PostgreSQL</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Agregar Reseña -->
+  <div class="modal-overlay" id="review-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Escribir Reseña (Servicio Node.js)</h3>
+        <button class="close-btn" onclick="closeReviewModal()">&times;</button>
+      </div>
+      <form id="review-form" onsubmit="handleCreateReview(event)">
+        <div class="form-group">
+          <label for="rev-product">Producto Asociado</label>
+          <select id="rev-product" required>
+            <option value="">Selecciona un producto...</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="rev-author">Tu Nombre / Autor</label>
+            <input type="text" id="rev-author" required placeholder="Ej: Andrea Gómez">
+          </div>
+          <div class="form-group">
+            <label for="rev-rating">Calificación</label>
+            <select id="rev-rating" required>
+              <option value="5">⭐⭐⭐⭐⭐ (5 Estrellas)</option>
+              <option value="4">⭐⭐⭐⭐ (4 Estrellas)</option>
+              <option value="3">⭐⭐⭐ (3 Estrellas)</option>
+              <option value="2">⭐⭐ (2 Estrellas)</option>
+              <option value="1">⭐ (1 Estrella)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="rev-comment">Comentario</label>
+          <textarea id="rev-comment" rows="3" required placeholder="¿Qué te pareció el producto?..."></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" onclick="closeReviewModal()">Cancelar</button>
+          <button type="submit" class="btn btn-secondary">Guardar en MongoDB</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

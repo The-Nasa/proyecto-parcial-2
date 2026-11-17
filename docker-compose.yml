@@ -1,0 +1,101 @@
+version: '3.9'
+
+name: cloudstore-parcial2
+
+# ==============================================================================
+# DOCKER COMPOSE LOCAL: PARCIAL 2 (Database-per-Service + Multi-Lenguaje)
+# ==============================================================================
+
+networks:
+  cloudstore-net:
+    name: cloudstore-net
+    driver: bridge
+
+volumes:
+  postgres_product_data:
+  mongo_review_data:
+
+services:
+  # --- Base de Datos 1: PostgreSQL para Catálogo de Productos (Python) ---
+  db-products:
+    image: postgres:16-alpine
+    container_name: cs-db-products
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: products_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_product_data:/var/lib/postgresql/data
+    networks:
+      - cloudstore-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d products_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # --- Base de Datos 2: MongoDB NoSQL para Reseñas (Node.js) ---
+  db-reviews:
+    image: mongo:7.0
+    container_name: cs-db-reviews
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_review_data:/data/db
+    networks:
+      - cloudstore-net
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh --quiet"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # --- Microservicio 1: Catálogo de Productos (Python - FastAPI) ---
+  product-service:
+    build:
+      context: ./services/product-service
+      dockerfile: Dockerfile
+    container_name: cs-product-service
+    environment:
+      PORT: 8000
+      DATABASE_URL: postgresql://postgres:postgrespassword@db-products:5432/products_db
+    ports:
+      - "8000:8000"
+    depends_on:
+      db-products:
+        condition: service_healthy
+    networks:
+      - cloudstore-net
+
+  # --- Microservicio 2: Reseñas y Calificaciones (Node.js - Express) ---
+  review-service:
+    build:
+      context: ./services/review-service
+      dockerfile: Dockerfile
+    container_name: cs-review-service
+    environment:
+      PORT: 3000
+      MONGODB_URI: mongodb://db-reviews:27017/reviews_db
+    ports:
+      - "3000:3000"
+    depends_on:
+      db-reviews:
+        condition: service_healthy
+    networks:
+      - cloudstore-net
+
+  # --- Frontend Integrador: Nginx + Web UI (Reverse Proxy Anti-CORS) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cs-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - product-service
+      - review-service
+    networks:
+      - cloudstore-net

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: parcial2
+  labels:
+    app.kubernetes.io/name: cloudstore
+    app.kubernetes.io/part-of: parcial2-microservices

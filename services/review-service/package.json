@@ -1,0 +1,19 @@
+{
+  "name": "review-service",
+  "version": "1.0.0",
+  "description": "Microservicio 2 para Parcial 2: Reseñas y calificaciones NoSQL (Node.js + Express)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "jest --runInBand --detectOpenHandles"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.3.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
+  }
+}

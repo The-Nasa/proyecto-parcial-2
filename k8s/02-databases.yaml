@@ -1,0 +1,123 @@
+# ==============================================================================
+# BASE DE DATOS 1: PostgreSQL para Catálogo de Productos (Python - FastAPI)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-products
+  namespace: parcial2
+  labels:
+    app: db-products
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-products
+  template:
+    metadata:
+      labels:
+        app: db-products
+        tier: database
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              value: "postgrespassword"
+            - name: POSTGRES_DB
+              value: "products_db"
+          ports:
+            - containerPort: 5432
+              name: postgres
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-products
+  namespace: parcial2
+  labels:
+    app: db-products
+spec:
+  type: ClusterIP
+  selector:
+    app: db-products
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres
+
+---
+# ==============================================================================
+# BASE DE DATOS 2: MongoDB NoSQL para Reseñas y Calificaciones (Node.js - Express)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-reviews
+  namespace: parcial2
+  labels:
+    app: db-reviews
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-reviews
+  template:
+    metadata:
+      labels:
+        app: db-reviews
+        tier: database
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:7.0
+          ports:
+            - containerPort: 27017
+              name: mongodb
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          volumeMounts:
+            - name: mongo-storage
+              mountPath: /data/db
+      volumes:
+        - name: mongo-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-reviews
+  namespace: parcial2
+  labels:
+    app: db-reviews
+spec:
+  type: ClusterIP
+  selector:
+    app: db-reviews
+  ports:
+    - port: 27017
+      targetPort: 27017
+      name: mongodb
