@@ -1,144 +1,177 @@
-# Guía de Implementación: Parcial 2 (Microservicios, K8s en AWS y Arnés)
+# CloudStore: Arquitectura Políglota de Microservicios en AWS EKS
 
-> **Contexto de la solicitud del docente:**
-> *"Como ya tienen el  harnés. Hacer 2 servicios independientes uno en un lenguaje otro en otro lenguaje cada uno con su BD. Y un front que consulte a ambos servicios y lo desplieguen con k8s en aws. Cada uno propone su solución y lo sube en git y pone video del despliegue."*
+![CI/CD Pipeline](<https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=github-actions&logoColor=white>)
+![Kubernetes](<https://img.shields.io/badge/Orquestaci%C3%B3n-AWS%20EKS%20v1.34-326CE5?logo=kubernetes&logoColor=white>)
+![AWS](<https://img.shields.io/badge/Cloud-Amazon%20Web%20Services-FF9900?logo=amazon-aws&logoColor=white>)
+![Python](<https://img.shields.io/badge/Backend%201-FastAPI%20%2B%20PostgreSQL-3776AB?logo=python&logoColor=white>)
+![Node.js](<https://img.shields.io/badge/Backend%202-Express%20%2B%20MongoDB-339933?logo=nodedotjs&logoColor=white>)
+![Nginx](<https://img.shields.io/badge/Frontend-Nginx%20Reverse%20Proxy-009639?logo=nginx&logoColor=white>)
+![OIDC](<https://img.shields.io/badge/Security-AWS%20IAM%20Keyless%20OIDC-red>)
 
----
-
-
-## 2. Requerimientos del Parcial 2 Desglosados
-
-| Requerimiento                             | Descripción                                                                                      | Criterio de Éxito                                                               |
-| :---------------------------------------- | :------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------- |
-| **1. Dos servicios independientes** | Un servicio en un lenguaje (ej. Python) y el otro en un lenguaje distinto (ej. Node.js o Go).     | Código desacoplado en carpetas separadas, cada uno con su propio framework web. |
-| **2. Base de datos por servicio**   | Principio *Database per Service*. Cada servicio tiene y administra su propio almacén de datos. | El Servicio 1 no accede directamente a la BD del Servicio 2 ni viceversa.        |
-| **3. Frontend unificado**           | Aplicación web que consume ambas APIs REST.                                                      | Pantalla interactiva que consulta y renderiza datos de ambos backends.           |
-| **4. Kubernetes (K8s) en AWS**      | Contenedorizar todo con Docker y orquestarlo en K8s sobre AWS.                                    | Pods, Deployments y Services corriendo en AWS (EKS o EC2 con K8s/k3s).           |
-| **5. Repositorio Git**              | Control de versiones con todo el código fuente y manifiestos `.yaml`.                          | Repositorio organizado y accesible.                                              |
-| **6. Video del despliegue**         | Grabación en video demostrando el clúster activo y la aplicación funcionando.                  | Evidencia visual completa de la infraestructura y funcionalidad.                 |
+Repositorio oficial para la entrega y sustentación del **Examen Parcial 2** del curso **Desarrollo de Aplicaciones para la Nube**.
 
 ---
 
-## 3. Arquitectura de la Solución Propuesta
+## 📋 Resumen del Proyecto y Cumplimiento de Requerimientos
 
-```mermaid
-flowchart TD
-    Client([Navegador del Usuario]) --> LB[AWS LoadBalancer / Ingress / NodePort]
-  
-    subgraph K8s ["Clúster de Kubernetes en AWS"]
-        LB --> FrontPod["Pod: Frontend (Nginx + React / HTML)"]
-  
-        FrontPod -->|HTTP /api/catalog| S1["Service / Pods: Catálogo (Python - FastAPI)"]
-        FrontPod -->|HTTP /api/reviews| S2["Service / Pods: Reseñas (Node.js - Express)"]
-  
-        S1 --> DB1[("StatefulSet / Pod: Postgres / SQLite (BD 1)")]
-        S2 --> DB2[("StatefulSet / Pod: MongoDB (BD 2)")]
-    end
-```
+El proyecto implementa una solución de comercio electrónico ligera (**CloudStore**) bajo la metodología de **Harness Engineering** y **Spec-Driven Development (SDD)**, cumpliendo todos los requerimientos académicos:
+
+| Requerimiento Académico                               | Implementación en este Repositorio                                                                                                                                                                                                      |   Estado   |
+| :----------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------: |
+| **1. Dos microservicios en lenguajes distintos** | **Microservicio 1:** Python 3.12 (FastAPI)**Microservicio 2:** Node.js 20 (Express)                                                                                                                                          | ✅ Cumplido |
+| **2. Base de datos por microservicio**           | **PostgreSQL 16** (`products_db`) para productos.**MongoDB 7.0** (`reviews_db`) para reseñas.                                                                                                                           | ✅ Cumplido |
+| **3. Frontend unificado anti-CORS**              | Interfaz web SPA moderna servida con **Nginx**, actuando como **Reverse Proxy** que consulta ambos backends en paralelo con `Promise.all()`.                                                                               | ✅ Cumplido |
+| **4. Orquestación K8s en AWS**                  | Clúster gestionado en **Amazon EKS** (`parcial2-eks`) con manifiestos Kustomize en `k8s/` y exposición mediante **AWS Elastic Load Balancer (ELB)**.                                                                   | ✅ Cumplido |
+| **5. CI/CD Automatizado**                        | Pipeline de **GitHub Actions** con autenticación **Keyless IAM OIDC** (sin access keys fijas), pruebas automáticas (`pytest` y `jest`), compilación multi-stage en **Amazon ECR** y despliegue a **EKS**. | ✅ Cumplido |
+| **6. Documentación OpenAPI / Swagger**          | Swagger UI interactivo disponible para ambos microservicios (FastAPI y Express).                                                                                                                                                         | ✅ Cumplido |
+| **7. Soporte CRUD Completo**                     | Operaciones de Creación (`POST`), Lectura (`GET`) y Eliminación (`DELETE`) en tiempo real desde la web.                                                                                                                          | ✅ Cumplido |
 
 ---
 
-## 4. Propuesta de Dominio: "E-Commerce / Reseñas de Productos"
+## 🏛️ Arquitectura del Sistema
 
-Para no perder tiempo con lógica de negocio compleja y enfocarse en la infraestructura:
-
-### Servicio A: Catálogo de Productos (Python - FastAPI)
-
-- **Lenguaje / Framework:** Python 3.12 + FastAPI.
-- **Base de Datos:** PostgreSQL o SQLite.
-- **Endpoints clave:**
-  - `GET /api/products`: Devuelve la lista de productos (ID, nombre, precio, descripción).
-  - `POST /api/products`: Permite agregar un producto nuevo.
-
-### Servicio B: Reseñas y Comentarios (Node.js - Express)
-
-- **Lenguaje / Framework:** Node.js (JavaScript/TypeScript) + Express.
-- **Base de Datos:** MongoDB.
-- **Endpoints clave:**
-  - `GET /api/reviews`: Devuelve comentarios o valoraciones asociadas a los productos.
-  - `POST /api/reviews`: Permite a un usuario dejar una calificación (1 a 5 estrellas) y comentario.
-
-### Frontend: Panel Integrador
-
-- **Tecnología:** React + Vite, o HTML5/CSS/JavaScript vanilla servido con una imagen Docker de `nginx:alpine`.
-- **Funcionamiento:**
-  - Llama a `GET /api/products` y lista los productos en tarjetas.
-  - Al lado o debajo, llama a `GET /api/reviews` y muestra los comentarios de los clientes.
-  - Tiene un formulario sencillo para agregar un producto o agregar un comentario.
+<p align="center">
+  <img src="./arquitectura-visual.jpg" alt="Arquitectura del Sistema CloudStore en AWS EKS" width="100%">
+</p>
 
 ---
 
-## 5. Estructura de Carpetas Recomendada en Git
+## 📦 Componentes del Sistema
+
+### 1. Catálogo de Productos (`services/product-service`)
+
+* **Lenguaje & Framework:** Python 3.12 + FastAPI + Pydantic v2.
+* **Base de Datos:** PostgreSQL 16 gestionado con SQLAlchemy ORM.
+* **Pruebas Automatizadas:** `pytest` con base de datos SQLite en memoria para tests aislados.
+* **Seguridad del Contenedor:** Dockerfile multi-stage ejecutado bajo usuario no privilegiado (`UID 1000:appuser`).
+* **Endpoints:**
+  * `GET /health/live` / `GET /health/ready`: Sondas de salud de Kubernetes.
+  * `GET /api/products`: Lista todos los productos disponibles.
+  * `POST /api/products`: Crea un nuevo producto (nombre, descripción, precio, categoría, stock).
+  * `DELETE /api/products/{id}`: Elimina un producto por su identificador.
+  * `GET /docs`: Documentación interactiva Swagger UI nativa de FastAPI.
+
+### 2. Reseñas y Calificaciones (`services/review-service`)
+
+* **Lenguaje & Framework:** Node.js 20 + Express + Mongoose.
+* **Base de Datos:** MongoDB 7.0 NoSQL para persistencia de documentos flexibles.
+* **Pruebas Automatizadas:** `jest` + `supertest` con fallback a memoria volátil para pruebas sin dependencias de red.
+* **Seguridad del Contenedor:** Dockerfile multi-stage con usuario sin privilegios `node`.
+* **Endpoints:**
+  * `GET /health/live` / `GET /health/ready`: Sondas de salud de Kubernetes.
+  * `GET /api/reviews?productId={id}`: Consulta reseñas (globales o filtradas por producto).
+  * `POST /api/reviews`: Publica una nueva reseña (autor, calificación 1 a 5 estrellas, comentario).
+  * `DELETE /api/reviews/{id}`: Elimina una reseña por su ID.
+  * `GET /api/reviews/docs`: Documentación interactiva Swagger UI con especificación OpenAPI 3.0.
+
+### 3. Frontend Web Unificado (`frontend`)
+
+* **Tecnología:** HTML5, CSS3 responsivo y Vanilla JavaScript asíncrono.
+* **Patrón Arquitectónico:** Nginx Reverse Proxy. Las peticiones hacia `/api/products` y `/api/reviews` viajan hacia el mismo host y puerto 80, eliminando completamente cualquier restricción de CORS (*Cross-Origin Resource Sharing*).
+* **Funcionalidades:**
+  * Monitoreo en vivo del estado de salud de ambos microservicios (Health Badges).
+  * Consumo asíncrono en paralelo con `Promise.all()`.
+  * Botones de acceso directo a la documentación **Swagger** de ambos microservicios.
+  * Formularios modales para registrar productos y publicar reseñas.
+  * Eliminación interactiva de registros con notificación inmediata (Toast).
+
+---
+
+## 🚀 Despliegue en AWS EKS (Kubernetes)
+
+Los manifiestos declarativos se encuentran en el directorio `k8s/`:
 
 ```text
-proyecto-parcial-2/
-├── .github/
-│   └── workflows/          # Tu arnés de CI (pruebas y análisis de código)
-│       └── ci.yml
-├── services/
-│   ├── product-service/    # Servicio 1 (Python)
-│   │   ├── Dockerfile
-│   │   ├── requirements.txt
-│   │   ├── main.py
-│   │   └── tests/
-│   └── review-service/     # Servicio 2 (Node.js)
-│       ├── Dockerfile
-│       ├── package.json
-│       ├── index.js
-│       └── tests/
-├── frontend/               # Frontend (React o HTML)
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   └── src/
-├── k8s/                    # Manifiestos de Kubernetes
-│   ├── 01-databases.yaml   # Deployments/Services para Postgres y Mongo
-│   ├── 02-product-svc.yaml # Deployment y Service para Producto
-│   ├── 03-review-svc.yaml  # Deployment y Service para Reseñas
-│   ├── 04-frontend.yaml    # Deployment y Service (LoadBalancer) para el Front
-│   └── ingress.yaml        # Opcional (si usas AWS Ingress Controller)
-└── README.md               # Documentación y enlaces
+k8s/
+├── 01-namespace.yaml        # Namespace aislado 'parcial2'
+├── 02-databases.yaml        # Deployments y Services para PostgreSQL y MongoDB
+├── 03-product-service.yaml  # Deployment y Service ClusterIP (Python FastAPI)
+├── 04-review-service.yaml   # Deployment y Service ClusterIP (Node.js Express)
+├── 05-frontend.yaml         # Deployment y Service LoadBalancer (AWS ELB)
+└── kustomization.yaml       # Archivo de orquestación unificada
+```
+
+### Comandos de Despliegue:
+
+```bash
+# 1. Configurar contexto del clúster EKS
+aws eks update-kubeconfig --name parcial2-eks --region us-east-1 --profile eks-admin
+
+# 2. Desplegar arquitectura completa con Kustomize
+kubectl apply -k k8s/
+
+# 3. Verificar estado de los Pods (5/5 en Running)
+kubectl get pods -n parcial2
+
+# 4. Obtener URL pública del LoadBalancer
+kubectl get svc frontend -n parcial2
 ```
 
 ---
 
-## 6. Opciones de Despliegue en AWS
+## 🔒 CI/CD y Seguridad OIDC en GitHub Actions
 
-### Opción 1: AWS EKS (Elastic Kubernetes Service) — *Solución Enterprise*
+El flujo de trabajo automatizado se encuentra en `.github/workflows/ci-cd.yml`:
 
-- **Ventajas:** Es el servicio estándar de producción en la industria.
-- **Cómo montarlo:** Usar `eksctl` (`eksctl create cluster --name parcial2 --region us-east-1 --node-type m7i-flex.large`).
-- **Consideración:** Cuesta aproximadamente $0.10 USD/hora por el plano de control más el costo de las instancias EC2. **Recuerda apagarlo al terminar el video.**
-- **Ventajas:** Entra dentro del Free Tier, es 100% K8s oficial y se monta en 5 minutos.
-- **Cómo montarlo:**
-
-  1. Levantar una instancia Ubuntu en AWS EC2 con puertos 80, 443 y 6443 abiertos en el Security Group.
-  2. Instalar k3s: `curl -sfL https://get.k3s.io | sh -`.
-  3. Ejecutar `kubectl apply -f k8s/`.
-- Sigue siendo **Kubernetes en AWS**, cumple con la consigna al 100% y no genera sobrecostos inesperados.
+1. **Etapa 1 - Pruebas Unitarias:**
+   * Configura entornos limpios de Python 3.12 y Node.js 20.
+   * Ejecuta `pytest` y `jest` garantizando 100% de tests aprobados antes de construir imágenes.
+2. **Etapa 2 - Compilación y Publicación en AWS ECR:**
+   * Se autentica de forma segura mediante **OpenID Connect (OIDC)** con el rol IAM `arn:aws:iam::881893826841:role/github-actions-deposit-role`.
+   * **Cero contraseñas fijas:** No se almacenan `AWS_ACCESS_KEY_ID` ni `AWS_SECRET_ACCESS_KEY` en los secretos de GitHub.
+   * Compila las imágenes multi-stage y las publica en los repositorios privados de Amazon ECR:
+     * `parcial2-product-service`
+     * `parcial2-review-service`
+     * `parcial2-frontend`
+3. **Etapa 3 - Despliegue Automatizado en Amazon EKS:**
+   * Actualiza el kubeconfig del clúster `parcial2-eks` y ejecuta `kubectl apply -k k8s/`.
 
 ---
 
-## 7. Guion y Lista de Cotejo para el Video de Entrega
+## 💻 Ejecución Local con Docker Compose
 
-Para asegurar la calificación máxima, el video (de 5 a 10 minutos) debe estructurarse así:
+Si se desea ejecutar el entorno completo localmente sin conexión a AWS:
 
-1. **Introducción y Arquitectura (1 minuto):**
-   - Presentación de los integrantes.
-   - Mostrar el diagrama de arquitectura y explicar los dos lenguajes elegidos y sus respectivas bases de datos.
-2. **Repositorio Git y Arnés (1-2 minutos):**
-   - Mostrar la estructura del repositorio en GitHub.
-   - Mostrar cómo corre el arnés de pruebas (las pruebas unitarias en GitHub Actions o localmente).
-3. **Evidencia del clúster en AWS (2 minutos):**
-   - Mostrar la consola de AWS (EKS o EC2).
-   - Abrir terminal conectada y ejecutar:
-     ```bash
-     kubectl get nodes
-     kubectl get pods -o wide
-     kubectl get services
-     ```
-   - Explicar que cada pod (front, servicio Python, servicio Node, BDs) está en estado `Running`.
-4. **Demostración funcional en el Navegador (2-3 minutos):**
-   - Abrir la IP pública / DNS de AWS en el navegador.
-   - Crear un producto nuevo y recargar para ver que persiste en la BD 1.
-   - Crear una reseña nueva y mostrar que persiste en la BD 2.
-   - Abrir las herramientas de desarrollador (`F12` -> pestaña *Network*) para que el docente vea las peticiones saliendo a las rutas de ambos microservicios.
+```bash
+# Clonar el repositorio
+git clone https://github.com/The-Nasa/proyecto-parcial-2.git
+cd proyecto-parcial-2
+
+# Levantar todos los microservicios y bases de datos
+docker-compose up --build
+```
+
+Una vez levantado, acceder a:
+
+* **Frontend Web:** `http://localhost:8080`
+* **Swagger Productos (Python):** `http://localhost:8080/docs`
+* **Swagger Reseñas (Node.js):** `http://localhost:8080/api/reviews/docs`
+
+---
+
+## 🧪 Ejecución de Pruebas Unitarias
+
+### Pruebas de Python (FastAPI):
+
+```bash
+cd services/product-service
+python -m pip install -r requirements.txt
+pytest -v
+```
+
+### Pruebas de Node.js (Express):
+
+```bash
+cd services/review-service
+npm install
+npm test
+```
+
+---
+
+## 📂 Metodología Arnés & Spec-Driven Development
+
+El proyecto incluye la documentación del arnés de ingeniería:
+
+* **Roles de Agentes:** Ubicados en `agents/` (`leader.md`, `spec_author.md`, `implementer.md`, `reviewer.md`, `deployer.md`).
+* **Especificaciones Técnicas (SDD):** Ubicadas en `specs/` con matriz de trazabilidad y especificaciones formales de cada microservicio.

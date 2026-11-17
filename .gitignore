@@ -39,7 +39,9 @@ data/
 .env
 .env.local
 
-# IDEs y OS
+# Documentos de trabajo local / Guías privadas
+GUIA-*.md
+*.local.md
 .vscode/
 .idea/
 .DS_Store
