@@ -13,7 +13,7 @@ env:
   AWS_REGION: us-east-1
   AWS_ROLE_ARN: arn:aws:iam::881893826841:role/github-actions-deposit-role
   ECR_REGISTRY: 881893826841.dkr.ecr.us-east-1.amazonaws.com
-  EKS_CLUSTER_NAME: medio-curso-eks
+  EKS_CLUSTER_NAME: parcial2-eks
 
 jobs:
   # ============================================================================
@@ -38,7 +38,7 @@ jobs:
 
       - name: Install Python Dependencies & Run Pytest
         env:
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: "sqlite:///:memory:"
         run: |
           cd services/product-service
           python -m pip install --upgrade pip
