@@ -7,6 +7,10 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:postgres@db-products:5432/products_db"
 )
 
+# Normalizar prefijo para forzar el uso de psycopg2 con SQLAlchemy 2.0
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
 # Soporte para SQLite en tests locales o Postgres en producción/Docker
 connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 

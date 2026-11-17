@@ -35,7 +35,7 @@ spec:
             - name: PORT
               value: "8000"
             - name: DATABASE_URL
-              value: "postgresql://postgres:postgrespassword@db-products:5432/products_db"
+              value: "postgresql+psycopg2://postgres:postgrespassword@db-products:5432/products_db"
           livenessProbe:
             httpGet:
               path: /health/live
