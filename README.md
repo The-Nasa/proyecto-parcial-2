@@ -12,6 +12,22 @@ Repositorio oficial para la entrega y sustentación del **Examen Parcial 2** del
 
 ---
 
+## 🎥 Video Demostrativo y Sustentación
+
+> 📺 **Enlace al video de demostración y sustentación en vivo:**  
+> **[▶ Ver Grabación en Google Drive](https://drive.google.com/file/d/1RETgq93fj9SVKyPPD5ipQ_v0ncV_8vfu/view?usp=sharing)**
+>
+> **Contenido demostrado:**
+> 1. Creación y verificación del clúster gestionado en **AWS EKS** v1.34 con `eksctl`.
+> 2. Autenticación **Keyless IAM OIDC** en Amazon EKS y pipeline en **GitHub Actions**.
+> 3. Despliegue de pods (`5/5 Running`) y obtención del DNS público de **AWS Elastic Load Balancer (ELB)**.
+> 4. Aplicación SPA en vivo: comunicación anti-CORS mediante **Nginx Reverse Proxy** y llamadas concurrentes con `Promise.all()`.
+> 5. Operaciones **CRUD en tiempo real** (creación y eliminación de productos en PostgreSQL y reseñas en MongoDB).
+> 6. Documentación de contratos de API interactivos con **Swagger UI** (FastAPI y Express).
+> 7. Pruebas de integración, verificación de repositorios **AWS ECR** y política de desmontaje seguro ($0.00 de costos ociosos).
+
+---
+
 ## 📋 Resumen del Proyecto y Cumplimiento de Requerimientos
 
 El proyecto implementa una solución de comercio electrónico ligera (**CloudStore**) bajo la metodología de **Harness Engineering** y **Spec-Driven Development (SDD)**, cumpliendo todos los requerimientos académicos:

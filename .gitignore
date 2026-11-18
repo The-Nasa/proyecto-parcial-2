@@ -46,3 +46,10 @@ GUIA-*.md
 .idea/
 .DS_Store
 Thumbs.db
+
+# Grabaciones y videos locales
+*.mp4
+*.mkv
+*.avi
+*.mov
+
